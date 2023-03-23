@@ -7,6 +7,7 @@
 #include "Components/EditableText.h"
 #include "Components/Slider.h"
 #include "Components/WidgetSwitcher.h"
+#include "Components/ScrollBox.h"
 #include "ServerGameInstance.h"
 
 
@@ -22,6 +23,10 @@ void ULoginWidget::NativeConstruct()
 	btn_Start->OnClicked.AddDynamic(this, &ULoginWidget::ClickStart);
 	btn_CreateSession->OnClicked.AddDynamic(this, &ULoginWidget::CreateServer);
 	sl_playerCount->OnValueChanged.AddDynamic(this, &ULoginWidget::OnMoveSlider);
+	btn_GoCreate->OnClicked.AddDynamic(this, &ULoginWidget::GoCreate);
+	btn_GoFind->OnClicked.AddDynamic(this, &ULoginWidget::GoFind);
+	btn_CreateBack->OnClicked.AddDynamic(this, &ULoginWidget::GoBack);
+	btn_FindBack->OnClicked.AddDynamic(this, &ULoginWidget::GoBack);
 
 	gameInstance = Cast<UServerGameInstance>(GetGameInstance());
 }
@@ -46,6 +51,21 @@ void ULoginWidget::CreateServer()
 // 슬라이더 값이 변경될 때 호출되는 함수
 void ULoginWidget::OnMoveSlider(float Value)
 {
-	FString num2str = FString::Printf(TEXT("%d"), Value);
-	text_playerCount->SetText(FText::FromString(num2str));
+	int32 newVal = FMath::RoundHalfFromZero(Value);
+	text_playerCount->SetText(FText::AsNumber(newVal));
+}
+
+void ULoginWidget::GoCreate()
+{
+	widgetSwitcher->SetActiveWidgetIndex(2);
+}
+
+void ULoginWidget::GoFind()
+{
+	widgetSwitcher->SetActiveWidgetIndex(3);
+}
+
+void ULoginWidget::GoBack()
+{
+	widgetSwitcher->SetActiveWidgetIndex(1);
 }

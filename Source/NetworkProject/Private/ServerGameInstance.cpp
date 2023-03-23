@@ -15,7 +15,6 @@ UServerGameInstance::UServerGameInstance()
 void UServerGameInstance::Init()
 {
 	Super::Init();
-	// 세션을 생성한다.
 
 	// 온라인 세션 기능이 구현되어 있는 IOnlineSubsystem 클래스를 가져온다.
 	IOnlineSubsystem* subsys = IOnlineSubsystem::Get();
@@ -59,4 +58,11 @@ void UServerGameInstance::OnCreateSessionComplete(FName sessionName, bool bIsSuc
 {
 	FString result = bIsSuccess ? TEXT("Create Session Success!") : TEXT("Create Session Failed...");
 	UE_LOG(LogTemp, Warning, TEXT("%s : %s"), *result, *sessionName.ToString());
+
+	// 세션 생성에 성공했다면, 전투 맵 쪽으로 세션에 접속한 모든 인원을 이동시킨다.
+	if (bIsSuccess)
+	{
+		GetWorld()->ServerTravel("/Game/Maps/MainMap?Listen");
+	}
+	
 }

@@ -36,6 +36,21 @@ public:
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadWrite, meta=(BindWidget))
 	class UWidgetSwitcher* widgetSwitcher;
 
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadWrite, meta=(BindWidget))
+	class UButton* btn_GoCreate;
+
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadWrite, meta=(BindWidget))
+	class UButton* btn_GoFind;
+
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadWrite, meta=(BindWidget))
+	class UButton* btn_CreateBack;
+
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadWrite, meta=(BindWidget))
+	class UButton* btn_FindBack;
+
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadWrite, meta=(BindWidget))
+	class UScrollBox* sbox_RoomList;
+
 protected:
 	virtual void NativeConstruct() override;
 
@@ -51,4 +66,12 @@ private:
 	UFUNCTION()
 	void OnMoveSlider(float Value);
 
+	UFUNCTION()
+	void GoCreate();
+
+	UFUNCTION()
+	void GoFind();
+
+	UFUNCTION()
+	void GoBack();
 };
