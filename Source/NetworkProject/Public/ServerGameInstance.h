@@ -10,6 +10,10 @@
 /**
  * 
  */
+
+ DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOnSearchResult, FString, roomName, int32, currentPlayers, int32, maxPlayers, int32, ping);
+
+
 UCLASS()
 class NETWORKPROJECT_API UServerGameInstance : public UGameInstance
 {
@@ -22,11 +26,18 @@ public:
 	// 전역 변수
 	IOnlineSessionPtr sessionInterface;
 	FName sessionID;
+	TSharedPtr<FOnlineSessionSearch> sessionSearch;
+	FOnSearchResult searchResultDele;
 
 	// 함수
 	void CreateMySession(FString roomName, int32 playerCount);
+	void FindMySession();
+
 	
 	UFUNCTION()
 	void OnCreateSessionComplete(FName sessionName, bool bIsSuccess);
 
+	UFUNCTION()
+	void OnFindSessionComplete(bool bWasSuccessful);
+	
 };

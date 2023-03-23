@@ -1,1 +1,1 @@
-"C:\Program Files\Epic Games\UE_5.1\Engine\Binaries\Win64\UnrealEditor.exe" "C:\Unreal Projects\NetworkProject\NetworkProject.uproject" -game -log
+"C:\Program Files\Epic Games\UE_5.1\Engine\Binaries\Win64\UnrealEditor.exe" "C:\Unreal Projects\NetworkProject\NetworkProject.uproject" -game -log -ResX=640 -ResY=480

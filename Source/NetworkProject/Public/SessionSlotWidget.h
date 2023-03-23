@@ -13,5 +13,17 @@ UCLASS()
 class NETWORKPROJECT_API USessionSlotWidget : public UUserWidget
 {
 	GENERATED_BODY()
-	
+
+public:
+	UPROPERTY(meta=(BindWidget))
+	class UButton* btn_roomName;
+
+	UPROPERTY(meta=(BindWidget))
+	class UTextBlock* text_roomName;
+
+	UPROPERTY(meta=(BindWidget))
+	class UTextBlock* text_playerInfo;
+
+	UPROPERTY(meta=(BindWidget))
+	class UTextBlock* text_ping;
 };

@@ -51,6 +51,9 @@ public:
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadWrite, meta=(BindWidget))
 	class UScrollBox* sbox_RoomList;
 
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<class USessionSlotWidget> sessionSlot;
+
 protected:
 	virtual void NativeConstruct() override;
 
@@ -74,4 +77,7 @@ private:
 
 	UFUNCTION()
 	void GoBack();
+
+	UFUNCTION()
+	void AddNewSlot(FString roomName, int32 currentPlayers, int32 maxPlayers, int32 ping);
 };

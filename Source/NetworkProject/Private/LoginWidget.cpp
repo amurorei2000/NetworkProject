@@ -9,6 +9,7 @@
 #include "Components/WidgetSwitcher.h"
 #include "Components/ScrollBox.h"
 #include "ServerGameInstance.h"
+#include "SessionSlotWidget.h"
 
 
 void ULoginWidget::NativeConstruct()
@@ -29,6 +30,11 @@ void ULoginWidget::NativeConstruct()
 	btn_FindBack->OnClicked.AddDynamic(this, &ULoginWidget::GoBack);
 
 	gameInstance = Cast<UServerGameInstance>(GetGameInstance());
+
+	if (gameInstance != nullptr)
+	{
+		gameInstance->searchResultDele.AddDynamic(this, &ULoginWidget::AddNewSlot);
+	}
 }
 
 void ULoginWidget::ClickStart()
@@ -63,9 +69,24 @@ void ULoginWidget::GoCreate()
 void ULoginWidget::GoFind()
 {
 	widgetSwitcher->SetActiveWidgetIndex(3);
+	gameInstance->FindMySession();
 }
 
 void ULoginWidget::GoBack()
 {
 	widgetSwitcher->SetActiveWidgetIndex(1);
+}
+
+// 게임 인스턴스로부터 검색 완료 이벤트를 받았을 때 실행될 함수
+void ULoginWidget::AddNewSlot(FString roomName, int32 currentPlayers, int32 maxPlayers, int32 ping)
+{
+	USessionSlotWidget* slotWidget = CreateWidget<USessionSlotWidget>(this, sessionSlot);
+	
+	if (slotWidget != nullptr)
+	{
+		slotWidget->text_roomName->SetText(FText::FromString(roomName));
+		slotWidget->text_playerInfo->SetText(FText::FromString(FString::Printf(TEXT("%d/%d"), currentPlayers, maxPlayers)));
+		slotWidget->text_ping->SetText(FText::FromString(FString::Printf(TEXT("%d ms"), ping)));
+		sbox_RoomList->AddChild(slotWidget);
+	}
 }
