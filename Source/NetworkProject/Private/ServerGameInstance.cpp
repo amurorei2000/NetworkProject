@@ -14,6 +14,7 @@ UServerGameInstance::UServerGameInstance()
 // 최초 실행되는 함수
 void UServerGameInstance::Init()
 {
+	Super::Init();
 	// 세션을 생성한다.
 
 	// 온라인 세션 기능이 구현되어 있는 IOnlineSubsystem 클래스를 가져온다.
