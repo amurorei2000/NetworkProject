@@ -28,12 +28,14 @@ void ULoginWidget::NativeConstruct()
 	btn_GoFind->OnClicked.AddDynamic(this, &ULoginWidget::GoFind);
 	btn_CreateBack->OnClicked.AddDynamic(this, &ULoginWidget::GoBack);
 	btn_FindBack->OnClicked.AddDynamic(this, &ULoginWidget::GoBack);
+	btn_Refresh->OnClicked.AddDynamic(this, &ULoginWidget::RefreshList);
 
 	gameInstance = Cast<UServerGameInstance>(GetGameInstance());
 
 	if (gameInstance != nullptr)
 	{
 		gameInstance->searchResultDele.AddDynamic(this, &ULoginWidget::AddNewSlot);
+		gameInstance->searchFinishedDele.AddDynamic(this, &ULoginWidget::RefreshEnabled);
 	}
 }
 
@@ -69,7 +71,7 @@ void ULoginWidget::GoCreate()
 void ULoginWidget::GoFind()
 {
 	widgetSwitcher->SetActiveWidgetIndex(3);
-	gameInstance->FindMySession();
+	RefreshList();
 }
 
 void ULoginWidget::GoBack()
@@ -78,15 +80,30 @@ void ULoginWidget::GoBack()
 }
 
 // 게임 인스턴스로부터 검색 완료 이벤트를 받았을 때 실행될 함수
-void ULoginWidget::AddNewSlot(FString roomName, int32 currentPlayers, int32 maxPlayers, int32 ping)
+void ULoginWidget::AddNewSlot(FSessionInfo sessionInfo)
 {
 	USessionSlotWidget* slotWidget = CreateWidget<USessionSlotWidget>(this, sessionSlot);
 	
 	if (slotWidget != nullptr)
 	{
-		slotWidget->text_roomName->SetText(FText::FromString(roomName));
-		slotWidget->text_playerInfo->SetText(FText::FromString(FString::Printf(TEXT("%d/%d"), currentPlayers, maxPlayers)));
-		slotWidget->text_ping->SetText(FText::FromString(FString::Printf(TEXT("%d ms"), ping)));
+		slotWidget->text_roomName->SetText(FText::FromString(sessionInfo.roomName));
+		slotWidget->text_playerInfo->SetText(FText::FromString(FString::Printf(TEXT("%d/%d"), sessionInfo.currentPlayers, sessionInfo.maxPlayers)));
+		slotWidget->text_ping->SetText(FText::FromString(FString::Printf(TEXT("%d ms"), sessionInfo.ping)));
+		slotWidget->index = sessionInfo.idx;
+
 		sbox_RoomList->AddChild(slotWidget);
 	}
+}
+
+// 세션 리스트 새로고침 함수
+void ULoginWidget::RefreshList()
+{
+	sbox_RoomList->ClearChildren();
+	gameInstance->FindMySession();
+	btn_Refresh->SetIsEnabled(false);
+}
+
+void ULoginWidget::RefreshEnabled()
+{
+	btn_Refresh->SetIsEnabled(true);
 }

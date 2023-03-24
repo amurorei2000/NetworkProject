@@ -11,8 +11,22 @@
  * 
  */
 
- DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOnSearchResult, FString, roomName, int32, currentPlayers, int32, maxPlayers, int32, ping);
+ USTRUCT()
+ struct FSessionInfo
+ {
+	GENERATED_BODY()
 
+	FString roomName;
+	int32 currentPlayers;
+	int32 maxPlayers;
+	int32 ping;
+	int32 idx;
+ };
+
+
+ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnSearchResult, FSessionInfo, sessionInfo);
+
+ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSearchFinished);
 
 UCLASS()
 class NETWORKPROJECT_API UServerGameInstance : public UGameInstance
@@ -28,10 +42,12 @@ public:
 	FName sessionID;
 	TSharedPtr<FOnlineSessionSearch> sessionSearch;
 	FOnSearchResult searchResultDele;
+	FOnSearchFinished searchFinishedDele;
 
 	// ÇÔ¼ö
 	void CreateMySession(FString roomName, int32 playerCount);
 	void FindMySession();
+	void JoinMySession(int32 sessionIdx);
 
 	
 	UFUNCTION()
@@ -40,4 +56,6 @@ public:
 	UFUNCTION()
 	void OnFindSessionComplete(bool bWasSuccessful);
 	
+	void OnJoinSessionComplete(FName sessionName, EOnJoinSessionCompleteResult::Type joinResult);
+
 };

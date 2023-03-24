@@ -26,7 +26,12 @@ void UServerGameInstance::Init()
 		{
 			sessionInterface->OnCreateSessionCompleteDelegates.AddUObject(this, &UServerGameInstance::OnCreateSessionComplete);
 			sessionInterface->OnFindSessionsCompleteDelegates.AddUObject(this, &UServerGameInstance::OnFindSessionComplete);
+			sessionInterface->OnJoinSessionCompleteDelegates.AddUObject(this, &UServerGameInstance::OnJoinSessionComplete);
 		}
+
+		// 연결 플랫폼의 이름을 출력한다.
+		FString platformName = subsys->GetSubsystemName().ToString();
+		UE_LOG(LogTemp, Warning, TEXT("Platform Name: %s"), *platformName);
 	}
 }
 
@@ -72,6 +77,14 @@ void UServerGameInstance::FindMySession()
 	sessionInterface->FindSessions(0, sessionSearch.ToSharedRef());
 }
 
+// 찾은 세션 리스트 중에서 특정 세션에 들어가고자 할 때 사용할 함수
+void UServerGameInstance::JoinMySession(int32 sessionIdx)
+{
+	// 인덱스로 세션을 선택하고 그 세션으로 조인한다.
+	FOnlineSessionSearchResult selectedSession = sessionSearch->SearchResults[sessionIdx];
+	sessionInterface->JoinSession(0, sessionID, selectedSession);
+}
+
 // 세션이 서버에 만들어졌을 때 호출된 함수
 void UServerGameInstance::OnCreateSessionComplete(FName sessionName, bool bIsSuccess)
 {
@@ -97,18 +110,48 @@ void UServerGameInstance::OnFindSessionComplete(bool bWasSuccessful)
 		// 검색 결과들을 모두 순회한다.
 		for (int32 i = 0; i < searchResults.Num(); i++)
 		{
+			FSessionInfo searchedSessionInfo;
+
 			FString roomName;
 			searchResults[i].Session.SessionSettings.Get(FName("KEY_RoomName"), roomName);
-			int32 maxPlayers = searchResults[i].Session.SessionSettings.NumPublicConnections;
-			int32 currentPlayers = maxPlayers - searchResults[i].Session.NumOpenPublicConnections;
-			int32 ping = searchResults[i].PingInMs;
+			searchedSessionInfo.roomName = roomName;
+
+			searchedSessionInfo.maxPlayers = searchResults[i].Session.SessionSettings.NumPublicConnections;
+
+			searchedSessionInfo.currentPlayers = searchedSessionInfo.maxPlayers - searchResults[i].Session.NumOpenPublicConnections;
+
+			searchedSessionInfo.ping = searchResults[i].PingInMs;
 
 			// 슬롯 생성에 필요한 정보를 이벤트로 송출한다.
-			searchResultDele.Broadcast(roomName, currentPlayers, maxPlayers, ping);
+			searchResultDele.Broadcast(searchedSessionInfo);
 		}
 	}
 	else
 	{
 		UE_LOG(LogTemp, Warning, TEXT("Find Sessions Failed..."));
 	}
+
+	// 새로고침 버튼을 다시 활성화한다.
+	searchFinishedDele.Broadcast();
+}
+
+// 다른 세션에 합류 처리가 끝났을 때 호출되는 이벤트 함수
+void UServerGameInstance::OnJoinSessionComplete(FName sessionName, EOnJoinSessionCompleteResult::Type joinResult)
+{
+	// 만일, join에 성공했다면 해당 IP Address로 레벨 이동을 한다.
+	if (joinResult == EOnJoinSessionCompleteResult::Type::Success)
+	{
+		// 세션 이름으로 IP 주소를 획득한다.
+		FString joinAddress;
+		sessionInterface->GetResolvedConnectString(sessionName, joinAddress);
+
+		UE_LOG(LogTemp, Warning, TEXT("Join Address: %s"), *joinAddress);
+
+		if (APlayerController* pc = GetWorld()->GetFirstPlayerController())
+		{
+			pc->ClientTravel(joinAddress, ETravelType::TRAVEL_Absolute);
+		}
+		
+	}
+
 }

@@ -43,6 +43,9 @@ public:
 	class UButton* btn_GoFind;
 
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadWrite, meta=(BindWidget))
+	class UButton* btn_Refresh;
+
+	UPROPERTY(VisibleDefaultsOnly, BlueprintReadWrite, meta=(BindWidget))
 	class UButton* btn_CreateBack;
 
 	UPROPERTY(VisibleDefaultsOnly, BlueprintReadWrite, meta=(BindWidget))
@@ -79,5 +82,12 @@ private:
 	void GoBack();
 
 	UFUNCTION()
-	void AddNewSlot(FString roomName, int32 currentPlayers, int32 maxPlayers, int32 ping);
+	void AddNewSlot(FSessionInfo sessionInfo);
+
+	UFUNCTION()
+	void RefreshList();
+
+	UFUNCTION()
+	void RefreshEnabled();
+
 };
