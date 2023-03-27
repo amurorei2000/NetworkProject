@@ -68,5 +68,10 @@ public:
 private:
 	FString PrintInfo();
 
+	int32 number;
+
+	UPROPERTY(Replicated)
+	int32 repNumber;
+
 };
 

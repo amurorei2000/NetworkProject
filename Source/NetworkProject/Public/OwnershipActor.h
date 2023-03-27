@@ -25,7 +25,26 @@ public:
 	UPROPERTY(EditAnywhere, Category=MyActor)
 	class UStaticMeshComponent* meshComp;
 
+	UFUNCTION()
+	void ScreenLog();
+
 private:
 	FString PrintInfo();
+	void CheckOwner();
+	class UMaterialInstanceDynamic* mat;
+	
+	UPROPERTY(Replicated)
+	FVector moveDirection;
 
+	UPROPERTY(ReplicatedUsing = ScreenLog)
+	int32 testNumber = 0;
+
+	UPROPERTY(ReplicatedUsing = ChangeColor)
+	FVector matColor;
+
+	UFUNCTION()
+	void OnOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
+
+	UFUNCTION()
+	void ChangeColor();
 };

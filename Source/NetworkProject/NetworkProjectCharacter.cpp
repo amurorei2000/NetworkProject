@@ -10,6 +10,7 @@
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
 #include "DrawDebugHelpers.h"
+#include "Net/UnrealNetwork.h"
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -76,6 +77,13 @@ void ANetworkProjectCharacter::Tick(float DeltaSeconds)
 	
 	// 상태 정보를 출력한다.
 	DrawDebugString(GetWorld(), GetActorLocation(), PrintInfo(), nullptr, FColor::White, 0.0f, true, 1.0f);
+
+	if (HasAuthority())
+	{
+		number++;
+		repNumber++;
+	}
+
 }
 
 FString ANetworkProjectCharacter::PrintInfo()
@@ -85,8 +93,13 @@ FString ANetworkProjectCharacter::PrintInfo()
 	FString myRemoteRole = UEnum::GetValueAsString<ENetRole>(GetRemoteRole());
 	FString myConnection = GetNetConnection() != nullptr ? TEXT("Valid") : TEXT("Invalid");
 	FString myOwner = GetOwner() != nullptr ? GetOwner()->GetName() : TEXT("No Owner");
+	FString name = this->GetName();
 
-	FString infoText = FString::Printf(TEXT("Local Role: %s\nRemote Role: %s\nNet Connection: %s\nOwner: %s"), *myLocalRole, *myRemoteRole, *myConnection, *myOwner);
+	FString infoText = FString::Printf(TEXT("Local Role: %s\nRemote Role: %s\nNet Connection: %s\nOwner: %s\nName: %s"), *myLocalRole, *myRemoteRole, *myConnection, *myOwner, *name);
+#pragma endregion
+
+#pragma region RepOrNot
+	//FString infoText = FString::Printf(TEXT("Number: %d\nReplicated Number: %d"), number, repNumber);
 #pragma endregion
 
 	return infoText;
@@ -148,6 +161,14 @@ void ANetworkProjectCharacter::Look(const FInputActionValue& Value)
 		AddControllerYawInput(LookAxisVector.X);
 		AddControllerPitchInput(LookAxisVector.Y);
 	}
+}
+
+void ANetworkProjectCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	//DOREPLIFETIME(ANetworkProjectCharacter, repNumber);
+	DOREPLIFETIME_CONDITION(ANetworkProjectCharacter, repNumber, COND_OwnerOnly);
 }
 
 
