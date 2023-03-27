@@ -9,6 +9,7 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "EnhancedInputComponent.h"
 #include "EnhancedInputSubsystems.h"
+#include "DrawDebugHelpers.h"
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -16,6 +17,8 @@
 
 ANetworkProjectCharacter::ANetworkProjectCharacter()
 {
+	PrimaryActorTick.bCanEverTick = true;
+
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
 		
@@ -65,6 +68,28 @@ void ANetworkProjectCharacter::BeginPlay()
 			Subsystem->AddMappingContext(DefaultMappingContext, 0);
 		}
 	}
+}
+
+void ANetworkProjectCharacter::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+	
+	// 상태 정보를 출력한다.
+	DrawDebugString(GetWorld(), GetActorLocation(), PrintInfo(), nullptr, FColor::White, 0.0f, true, 1.0f);
+}
+
+FString ANetworkProjectCharacter::PrintInfo()
+{
+#pragma region RoleInfo
+	FString myLocalRole = UEnum::GetValueAsString<ENetRole>(GetLocalRole());
+	FString myRemoteRole = UEnum::GetValueAsString<ENetRole>(GetRemoteRole());
+	FString myConnection = GetNetConnection() != nullptr ? TEXT("Valid") : TEXT("Invalid");
+	FString myOwner = GetOwner() != nullptr ? GetOwner()->GetName() : TEXT("No Owner");
+
+	FString infoText = FString::Printf(TEXT("Local Role: %s\nRemote Role: %s\nNet Connection: %s\nOwner: %s"), *myLocalRole, *myRemoteRole, *myConnection, *myOwner);
+#pragma endregion
+
+	return infoText;
 }
 
 //////////////////////////////////////////////////////////////////////////

@@ -81,6 +81,8 @@ void UServerGameInstance::FindMySession()
 void UServerGameInstance::JoinMySession(int32 sessionIdx)
 {
 	// 인덱스로 세션을 선택하고 그 세션으로 조인한다.
+	UE_LOG(LogTemp, Warning, TEXT("Room Number: %d"), sessionIdx);
+
 	FOnlineSessionSearchResult selectedSession = sessionSearch->SearchResults[sessionIdx];
 	sessionInterface->JoinSession(0, sessionID, selectedSession);
 }
@@ -121,6 +123,8 @@ void UServerGameInstance::OnFindSessionComplete(bool bWasSuccessful)
 			searchedSessionInfo.currentPlayers = searchedSessionInfo.maxPlayers - searchResults[i].Session.NumOpenPublicConnections;
 
 			searchedSessionInfo.ping = searchResults[i].PingInMs;
+			searchedSessionInfo.idx = i;
+
 
 			// 슬롯 생성에 필요한 정보를 이벤트로 송출한다.
 			searchResultDele.Broadcast(searchedSessionInfo);
