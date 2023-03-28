@@ -11,6 +11,7 @@
 #include "EnhancedInputSubsystems.h"
 #include "DrawDebugHelpers.h"
 #include "Net/UnrealNetwork.h"
+#include "BulletActor.h"
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -22,12 +23,12 @@ ANetworkProjectCharacter::ANetworkProjectCharacter()
 
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
-		
+
 	// Don't rotate when the controller rotates. Let that just affect the camera.
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationYaw = false;
 	bUseControllerRotationRoll = false;
-	
+
 
 	// Configure character movement
 	GetCharacterMovement()->bOrientRotationToMovement = true; // Character moves in the direction of input...	
@@ -74,7 +75,7 @@ void ANetworkProjectCharacter::BeginPlay()
 void ANetworkProjectCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
-	
+
 	// 상태 정보를 출력한다.
 	DrawDebugString(GetWorld(), GetActorLocation(), PrintInfo(), nullptr, FColor::White, 0.0f, true, 1.0f);
 
@@ -110,18 +111,13 @@ FString ANetworkProjectCharacter::PrintInfo()
 
 void ANetworkProjectCharacter::SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent)
 {
-	// Set up action bindings
 	if (UEnhancedInputComponent* EnhancedInputComponent = CastChecked<UEnhancedInputComponent>(PlayerInputComponent)) {
-		
-		//Jumping
+
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Triggered, this, &ACharacter::Jump);
 		EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
-
-		//Moving
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ANetworkProjectCharacter::Move);
-
-		//Looking
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ANetworkProjectCharacter::Look);
+		EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Started, this, &ANetworkProjectCharacter::Fire);
 
 	}
 
@@ -140,7 +136,7 @@ void ANetworkProjectCharacter::Move(const FInputActionValue& Value)
 
 		// get forward vector
 		const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
-	
+
 		// get right vector 
 		const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
 
@@ -161,6 +157,54 @@ void ANetworkProjectCharacter::Look(const FInputActionValue& Value)
 		AddControllerYawInput(LookAxisVector.X);
 		AddControllerPitchInput(LookAxisVector.Y);
 	}
+}
+
+void ANetworkProjectCharacter::Fire()
+{
+	//UE_LOG(LogTemp, Warning, TEXT("Query Fire!"));
+	//GEngine->AddOnScreenDebugMessage(-1, 3, FColor::Green, FString("Query Fire!"), true, FVector2D(1.2f));
+	ServerFire(10000);
+}
+
+
+// 서버에 요청하는 함수
+void ANetworkProjectCharacter::ServerFire_Implementation(int32 damage)
+{
+	//UE_LOG(LogTemp, Warning, TEXT("Server Fire!"));
+	//GEngine->AddOnScreenDebugMessage(-1, 3, FColor::Green, FString("Server Fire!"), true, FVector2D(1.2f));
+
+	FActorSpawnParameters param;
+	param.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+
+	ABulletActor* bullet = GetWorld()->SpawnActor<ABulletActor>(bulletFactory, GetActorLocation() + GetActorForwardVector() * 100, GetActorRotation(), param);
+	bullet->SetOwner(this);
+	//bullet->SetOwner(nullptr);
+
+	//MulticastFire();
+	//ClientFire();
+
+}
+
+bool ANetworkProjectCharacter::ServerFire_Validate(int32 damage)
+{
+	return true;
+}
+
+// 서버로부터 전달되는 함수
+void ANetworkProjectCharacter::MulticastFire_Implementation(int32 damage)
+{
+	//UE_LOG(LogTemp, Warning, TEXT("Multicast Fire!"));
+	//GEngine->AddOnScreenDebugMessage(-1, 3, FColor::Green, FString("Multicast Fire!"), true, FVector2D(1.2f));
+
+}
+
+
+void ANetworkProjectCharacter::ClientFire_Implementation(int32 damage)
+{
+	UE_LOG(LogTemp, Warning, TEXT("Client Fire!"));
+	GEngine->AddOnScreenDebugMessage(-1, 3, FColor::Green, FString("Client Fire!"), true, FVector2D(1.2f));
+
+	
 }
 
 void ANetworkProjectCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
