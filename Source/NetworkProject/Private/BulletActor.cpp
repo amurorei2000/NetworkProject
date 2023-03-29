@@ -36,14 +36,18 @@ void ABulletActor::Tick(float DeltaTime)
 	SetActorLocation(GetActorLocation() + GetActorForwardVector() * moveSpeed * DeltaTime);
 
 	FString ownerName = GetOwner() != nullptr ? GetOwner()->GetName() : TEXT("No Owner");
-	DrawDebugString(GetWorld(), GetActorLocation(), ownerName, nullptr, FColor::White, true);
+	//DrawDebugString(GetWorld(), GetActorLocation(), ownerName, nullptr, FColor::White, true);
 }
 
 void ABulletActor::OnOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	// 부딪히면 불꽃 이펙트를 출력한다음 제거한다. 
-	ServerSpawnEffect();
-	
+	APawn* owningPawn = Cast<APawn>(GetOwner());
+	if (owningPawn->GetController() != nullptr && owningPawn->GetController()->IsLocalController())
+	{
+		ServerSpawnEffect();
+	}
+
 }
 
 void ABulletActor::ServerSpawnEffect_Implementation()

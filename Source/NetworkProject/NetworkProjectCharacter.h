@@ -63,16 +63,19 @@ public:
 	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
 
 	UFUNCTION(Server, Unreliable, WithValidation)
-	void ServerFire(int32 damage);
+	void ServerFire();
 
 	UFUNCTION(NetMulticast, Unreliable)
-	void MulticastFire(int32 damage);
+	void MulticastFire();
 
 	UFUNCTION(Client, Unreliable)
-	void ClientFire(int32 damage);
+	void ClientFire();
 
 	UPROPERTY(EditDefaultsOnly, Category = MySettings)
 	TSubclassOf<class ABulletActor> bulletFactory;
+
+	UPROPERTY(EditDefaultsOnly, Category = MySettings)
+	UAnimMontage* fireMontage;
 
 private:
 	FString PrintInfo();

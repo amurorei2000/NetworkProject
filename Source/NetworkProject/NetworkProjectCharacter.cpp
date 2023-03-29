@@ -163,12 +163,13 @@ void ANetworkProjectCharacter::Fire()
 {
 	//UE_LOG(LogTemp, Warning, TEXT("Query Fire!"));
 	//GEngine->AddOnScreenDebugMessage(-1, 3, FColor::Green, FString("Query Fire!"), true, FVector2D(1.2f));
-	ServerFire(10000);
+	
+	ServerFire();
 }
 
 
 // 서버에 요청하는 함수
-void ANetworkProjectCharacter::ServerFire_Implementation(int32 damage)
+void ANetworkProjectCharacter::ServerFire_Implementation()
 {
 	//UE_LOG(LogTemp, Warning, TEXT("Server Fire!"));
 	//GEngine->AddOnScreenDebugMessage(-1, 3, FColor::Green, FString("Server Fire!"), true, FVector2D(1.2f));
@@ -180,26 +181,30 @@ void ANetworkProjectCharacter::ServerFire_Implementation(int32 damage)
 	bullet->SetOwner(this);
 	//bullet->SetOwner(nullptr);
 
-	//MulticastFire();
+	MulticastFire();
 	//ClientFire();
 
 }
 
-bool ANetworkProjectCharacter::ServerFire_Validate(int32 damage)
+bool ANetworkProjectCharacter::ServerFire_Validate()
 {
 	return true;
 }
 
 // 서버로부터 전달되는 함수
-void ANetworkProjectCharacter::MulticastFire_Implementation(int32 damage)
+void ANetworkProjectCharacter::MulticastFire_Implementation()
 {
 	//UE_LOG(LogTemp, Warning, TEXT("Multicast Fire!"));
 	//GEngine->AddOnScreenDebugMessage(-1, 3, FColor::Green, FString("Multicast Fire!"), true, FVector2D(1.2f));
 
+	if (fireMontage != nullptr)
+	{
+		PlayAnimMontage(fireMontage);
+	}
 }
 
 
-void ANetworkProjectCharacter::ClientFire_Implementation(int32 damage)
+void ANetworkProjectCharacter::ClientFire_Implementation()
 {
 	UE_LOG(LogTemp, Warning, TEXT("Client Fire!"));
 	GEngine->AddOnScreenDebugMessage(-1, 3, FColor::Green, FString("Client Fire!"), true, FVector2D(1.2f));
