@@ -30,6 +30,9 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = AnimSettings)
 	float pitch = 0;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = AnimSettings)
+	bool bIsDead = false;
+
 private:
 	class ANetworkProjectCharacter* player;
 

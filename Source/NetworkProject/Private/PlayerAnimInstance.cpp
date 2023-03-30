@@ -54,4 +54,6 @@ void UPlayerAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	FRotator deltaRot = playerRot - viewRot;
 	pitch = FMath::Clamp(deltaRot.GetNormalized().Pitch, -45.0f, 45.0f);
 	
+	// 죽었는지 확인
+	bIsDead = player->IsDead();
 }

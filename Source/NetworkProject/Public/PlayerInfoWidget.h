@@ -27,11 +27,8 @@ public:
 
 	void SetPlayer(class ANetworkProjectCharacter* player);
 
-	UFUNCTION(Server, Unreliable)
-	void ServerSetHealthBar(const int32& value);
+	void SetHealthBar(const int32& value);
 
-	UFUNCTION(NetMulticast, Unreliable)
-	void MulticastSetHealthBar(const int32& value);
 
 
 private:

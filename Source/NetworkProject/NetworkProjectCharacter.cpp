@@ -14,6 +14,7 @@
 #include "BulletActor.h"
 #include "Components/WidgetComponent.h"
 #include "PlayerInfoWidget.h"
+#include "PlayerAnimInstance.h"
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -80,12 +81,16 @@ void ANetworkProjectCharacter::BeginPlay()
 	}
 
 	infoWidget = Cast<UPlayerInfoWidget>(playerInfoUI->GetWidget());
-
+	playerAnim = Cast<UPlayerAnimInstance>(GetMesh()->GetAnimInstance());
 }
 
 void ANetworkProjectCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+
+	if(bIsDead)
+	return;
+
 
 	// 상태 정보를 출력한다.
 	DrawDebugString(GetWorld(), GetActorLocation(), PrintInfo(), nullptr, FColor::White, 0.0f, true, 1.0f);
@@ -94,6 +99,18 @@ void ANetworkProjectCharacter::Tick(float DeltaSeconds)
 	{
 		number++;
 		repNumber++;
+	}
+
+	infoWidget->SetHealthBar(curHP);
+
+	if (curHP <= 0)
+	{
+		bIsDead = true;
+		GetCharacterMovement()->DisableMovement();
+		GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		bUseControllerRotationYaw = false;
+		FollowCamera->PostProcessSettings.ColorSaturation = FVector4(0, 0, 0, 1);
 	}
 
 }
@@ -235,6 +252,33 @@ void ANetworkProjectCharacter::AddHealth(int32 value)
 	curHP = FMath::Clamp(curHP + value, 0, maxHP);
 }
 
+void ANetworkProjectCharacter::ServerDamageProcess_Implementation(int32 value)
+{
+	AddHealth(value);
+	MulticastDamageProcess();
+}
+
+void ANetworkProjectCharacter::MulticastDamageProcess_Implementation()
+{
+	if (curHP > 0)
+	{
+		if(hitMontage != nullptr)
+		{
+			PlayAnimMontage(hitMontage);
+		}
+
+	}
+	else
+	{
+		// 죽음 변수 변경
+		
+		if (playerAnim != nullptr)
+		{
+			playerAnim->bIsDead = true;
+		}
+	}
+}
+
 void ANetworkProjectCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
@@ -245,6 +289,7 @@ void ANetworkProjectCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProper
 	DOREPLIFETIME(ANetworkProjectCharacter, curHP);
 	DOREPLIFETIME(ANetworkProjectCharacter, ammo);
 	DOREPLIFETIME(ANetworkProjectCharacter, myName);
+	DOREPLIFETIME(ANetworkProjectCharacter, bIsDead);
 
 }
 

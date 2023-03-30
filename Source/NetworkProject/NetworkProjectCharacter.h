@@ -81,6 +81,9 @@ public:
 	UAnimMontage* fireMontage;
 
 	UPROPERTY(EditDefaultsOnly, Category = MySettings)
+	UAnimMontage* hitMontage;
+
+	UPROPERTY(EditDefaultsOnly, Category = MySettings)
 	int32 maxHP = 100;
 
 	UPROPERTY(EditDefaultsOnly, Replicated, Category = MySettings)
@@ -99,8 +102,16 @@ public:
 	UFUNCTION()
 	void AddHealth(int32 value);
 
+	UFUNCTION(Server, Unreliable)
+	void ServerDamageProcess(int32 value);
+
+	UFUNCTION(NetMulticast, Unreliable)
+	void MulticastDamageProcess();
+
 	FORCEINLINE int32 GetHealth() { return curHP; };
 	FORCEINLINE int32 GetAmmo() { return ammo; };
+	FORCEINLINE bool IsDead() { return bIsDead; };
+
 
 private:
 	FString PrintInfo();
@@ -113,5 +124,9 @@ private:
 	UPROPERTY(Replicated)
 	FString myName;
 
+	UPROPERTY(Replicated)
+	bool bIsDead = false;
+
+	class UPlayerAnimInstance* playerAnim;
 };
 

@@ -6,6 +6,7 @@
 #include "Components/ProgressBar.h"
 #include "../NetworkProjectCharacter.h"
 
+
 void UPlayerInfoWidget::NativeConstruct()
 {
 	Super::NativeConstruct();
@@ -14,7 +15,7 @@ void UPlayerInfoWidget::NativeConstruct()
 
 	if (myPlayer != nullptr)
 	{
-		ServerSetHealthBar(myPlayer->GetHealth());
+		SetHealthBar(myPlayer->GetHealth());
 	}
 }
 
@@ -32,13 +33,12 @@ void UPlayerInfoWidget::SetPlayer(class ANetworkProjectCharacter* player)
 	myPlayer = player;
 }
 
-void UPlayerInfoWidget::ServerSetHealthBar_Implementation(const int32& value)
+void UPlayerInfoWidget::SetHealthBar(const int32& value)
 {
-	MulticastSetHealthBar(value);
+	if(myPlayer !=nullptr)
+	{
+		float calcHP = (float)value / (float)myPlayer->maxHP;
+		pb_HP->SetPercent(calcHP);
+	}
 }
 
-void UPlayerInfoWidget::MulticastSetHealthBar_Implementation(const int32& value)
-{
-	float calcHP = (float)(myPlayer->GetHealth()) / (float)myPlayer->maxHP;
-	pb_HP->SetPercent(calcHP);
-}

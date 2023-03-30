@@ -6,6 +6,7 @@
 #include "Components/StaticMeshComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "DrawDebugHelpers.h"
+#include "../NetworkProjectCharacter.h"
 
 ABulletActor::ABulletActor()
 {
@@ -46,6 +47,15 @@ void ABulletActor::OnOverlap(UPrimitiveComponent* OverlappedComponent, AActor* O
 	if (owningPawn->GetController() != nullptr && owningPawn->GetController()->IsLocalController())
 	{
 		ServerSpawnEffect();
+	}
+
+	if (HasAuthority())
+	{
+		ANetworkProjectCharacter* player = Cast<ANetworkProjectCharacter>(OtherActor);
+		if (player != nullptr)
+		{
+			player->ServerDamageProcess(-10);
+		}
 	}
 
 }
