@@ -21,6 +21,9 @@ class ANetworkProjectCharacter : public ACharacter
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 		class UCameraComponent* FollowCamera;
 
+	UPROPERTY(VisibleAnywhere)
+	class UWidgetComponent* playerInfoUI;
+
 	/** MappingContext */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 		class UInputMappingContext* DefaultMappingContext;
@@ -77,6 +80,28 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = MySettings)
 	UAnimMontage* fireMontage;
 
+	UPROPERTY(EditDefaultsOnly, Category = MySettings)
+	int32 maxHP = 100;
+
+	UPROPERTY(EditDefaultsOnly, Replicated, Category = MySettings)
+	int32 curHP;
+
+	UPROPERTY(EditDefaultsOnly, Replicated, Category = MySettings)
+	int32 ammo;
+
+	UPROPERTY(VisibleDefaultsOnly, Category = MySettings)
+	class UPlayerInfoWidget* infoWidget;
+
+
+	UFUNCTION()
+	void SetHealth(int32 value);
+
+	UFUNCTION()
+	void AddHealth(int32 value);
+
+	FORCEINLINE int32 GetHealth() { return curHP; };
+	FORCEINLINE int32 GetAmmo() { return ammo; };
+
 private:
 	FString PrintInfo();
 
@@ -84,6 +109,9 @@ private:
 
 	UPROPERTY(Replicated)
 	int32 repNumber;
+
+	UPROPERTY(Replicated)
+	FString myName;
 
 };
 

@@ -12,6 +12,8 @@
 #include "DrawDebugHelpers.h"
 #include "Net/UnrealNetwork.h"
 #include "BulletActor.h"
+#include "Components/WidgetComponent.h"
+#include "PlayerInfoWidget.h"
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -53,8 +55,9 @@ ANetworkProjectCharacter::ANetworkProjectCharacter()
 	FollowCamera->SetupAttachment(CameraBoom, USpringArmComponent::SocketName); // Attach the camera to the end of the boom and let the boom adjust to match the controller orientation
 	FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
 
-	// Note: The skeletal mesh and anim blueprint references on the Mesh component (inherited from Character) 
-	// are set in the derived blueprint asset named ThirdPersonCharacter (to avoid direct content references in C++)
+	playerInfoUI = CreateDefaultSubobject<UWidgetComponent>(TEXT("Player Info UI"));
+	playerInfoUI->SetupAttachment(GetMesh());
+
 }
 
 void ANetworkProjectCharacter::BeginPlay()
@@ -70,6 +73,14 @@ void ANetworkProjectCharacter::BeginPlay()
 			Subsystem->AddMappingContext(DefaultMappingContext, 0);
 		}
 	}
+
+	if (HasAuthority())
+	{
+		SetHealth(maxHP);
+	}
+
+	infoWidget = Cast<UPlayerInfoWidget>(playerInfoUI->GetWidget());
+
 }
 
 void ANetworkProjectCharacter::Tick(float DeltaSeconds)
@@ -89,18 +100,20 @@ void ANetworkProjectCharacter::Tick(float DeltaSeconds)
 
 FString ANetworkProjectCharacter::PrintInfo()
 {
+	FString infoText = "";
+
 #pragma region RoleInfo
-	FString myLocalRole = UEnum::GetValueAsString<ENetRole>(GetLocalRole());
+	/*FString myLocalRole = UEnum::GetValueAsString<ENetRole>(GetLocalRole());
 	FString myRemoteRole = UEnum::GetValueAsString<ENetRole>(GetRemoteRole());
 	FString myConnection = GetNetConnection() != nullptr ? TEXT("Valid") : TEXT("Invalid");
 	FString myOwner = GetOwner() != nullptr ? GetOwner()->GetName() : TEXT("No Owner");
 	FString name = this->GetName();
 
-	FString infoText = FString::Printf(TEXT("Local Role: %s\nRemote Role: %s\nNet Connection: %s\nOwner: %s\nName: %s"), *myLocalRole, *myRemoteRole, *myConnection, *myOwner, *name);
+	infoText = FString::Printf(TEXT("Local Role: %s\nRemote Role: %s\nNet Connection: %s\nOwner: %s\nName: %s"), *myLocalRole, *myRemoteRole, *myConnection, *myOwner, *name);*/
 #pragma endregion
 
 #pragma region RepOrNot
-	//FString infoText = FString::Printf(TEXT("Number: %d\nReplicated Number: %d"), number, repNumber);
+	//infoText = FString::Printf(TEXT("Number: %d\nReplicated Number: %d"), number, repNumber);
 #pragma endregion
 
 	return infoText;
@@ -163,7 +176,7 @@ void ANetworkProjectCharacter::Fire()
 {
 	//UE_LOG(LogTemp, Warning, TEXT("Query Fire!"));
 	//GEngine->AddOnScreenDebugMessage(-1, 3, FColor::Green, FString("Query Fire!"), true, FVector2D(1.2f));
-	
+
 	ServerFire();
 }
 
@@ -209,7 +222,17 @@ void ANetworkProjectCharacter::ClientFire_Implementation()
 	UE_LOG(LogTemp, Warning, TEXT("Client Fire!"));
 	GEngine->AddOnScreenDebugMessage(-1, 3, FColor::Green, FString("Client Fire!"), true, FVector2D(1.2f));
 
-	
+
+}
+
+void ANetworkProjectCharacter::SetHealth(int32 value)
+{
+	curHP = FMath::Min(maxHP, value);
+}
+
+void ANetworkProjectCharacter::AddHealth(int32 value)
+{
+	curHP = FMath::Clamp(curHP + value, 0, maxHP);
 }
 
 void ANetworkProjectCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -217,7 +240,12 @@ void ANetworkProjectCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProper
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	//DOREPLIFETIME(ANetworkProjectCharacter, repNumber);
-	DOREPLIFETIME_CONDITION(ANetworkProjectCharacter, repNumber, COND_OwnerOnly);
+	//DOREPLIFETIME_CONDITION(ANetworkProjectCharacter, repNumber, COND_OwnerOnly);
+
+	DOREPLIFETIME(ANetworkProjectCharacter, curHP);
+	DOREPLIFETIME(ANetworkProjectCharacter, ammo);
+	DOREPLIFETIME(ANetworkProjectCharacter, myName);
+
 }
 
 
