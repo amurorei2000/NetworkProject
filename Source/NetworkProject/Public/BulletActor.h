@@ -32,12 +32,12 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = BulletSettings)
 	class UParticleSystem* explosion;
 
+	UPROPERTY(EditAnywhere)
+	int32 attackPower;
+
 	UFUNCTION()
 	void OnOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult);
 
-	UFUNCTION(Server, Unreliable)
-	void ServerSpawnEffect();
+	virtual void Destroyed();
 
-	UFUNCTION(NetMulticast, Unreliable)
-	void MulticastSpawnEffect();
 };

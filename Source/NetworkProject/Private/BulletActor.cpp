@@ -42,34 +42,30 @@ void ABulletActor::Tick(float DeltaTime)
 
 void ABulletActor::OnOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	// 부딪히면 불꽃 이펙트를 출력한다음 제거한다. 
-	APawn* owningPawn = Cast<APawn>(GetOwner());
-	if (owningPawn->GetController() != nullptr && owningPawn->GetController()->IsLocalController())
-	{
-		ServerSpawnEffect();
-	}
+	if (GetOwner() == nullptr)
+		return;
 
-	if (HasAuthority())
+	GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Yellow, FString::Printf(TEXT("Damage: %d"), attackPower), true, FVector2D(1.2f));
+
+	// 부딪히면 불꽃 이펙트를 출력한다음 제거한다. 
+	ANetworkProjectCharacter* player = Cast<ANetworkProjectCharacter>(OtherActor);
+
+	if (OtherActor != GetOwner())
 	{
-		ANetworkProjectCharacter* player = Cast<ANetworkProjectCharacter>(OtherActor);
-		if (player != nullptr)
+		if (HasAuthority())
 		{
-			player->ServerDamageProcess(-10);
+			if (player != nullptr)
+			{
+				player->ServerDamageProcess(attackPower * -1);
+				Destroy();
+			}
 		}
 	}
-
 }
 
-void ABulletActor::ServerSpawnEffect_Implementation()
-{
-	MulticastSpawnEffect();
-}
 
-void ABulletActor::MulticastSpawnEffect_Implementation()
+void ABulletActor::Destroyed()
 {
-	GEngine->AddOnScreenDebugMessage(-1, 3, FColor::Red, FString("Spawn Effect!"), true, FVector2D(1.2f));
-
 	UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), explosion, GetActorLocation(), FRotator::ZeroRotator, true);
-	//Destroy();
 }
 

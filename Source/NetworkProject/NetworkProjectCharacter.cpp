@@ -15,6 +15,9 @@
 #include "Components/WidgetComponent.h"
 #include "PlayerInfoWidget.h"
 #include "PlayerAnimInstance.h"
+#include "WeaponActor.h"
+#include "ServerGameInstance.h"
+#include "Components/TextBlock.h"
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -78,19 +81,32 @@ void ANetworkProjectCharacter::BeginPlay()
 	if (HasAuthority())
 	{
 		SetHealth(maxHP);
+		
 	}
 
 	infoWidget = Cast<UPlayerInfoWidget>(playerInfoUI->GetWidget());
 	playerAnim = Cast<UPlayerAnimInstance>(GetMesh()->GetAnimInstance());
+	gameInstance = Cast<UServerGameInstance>(GetGameInstance());
+
+	if (GetController() != nullptr && GetController()->IsLocalController())
+	{
+		ServerSetName(gameInstance->sessionID.ToString());
+	}
+
+	/*FTimerHandle nameHandle;
+	GetWorldTimerManager().SetTimer(nameHandle, FTimerDelegate::CreateLambda([&](){ }), 0.1f, false);*/
+
+	
 }
 
 void ANetworkProjectCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
-	if(bIsDead)
-	return;
+	infoWidget->text_Name->SetText(FText::FromString(myName));
 
+	if (bIsDead)
+		return;
 
 	// 상태 정보를 출력한다.
 	DrawDebugString(GetWorld(), GetActorLocation(), PrintInfo(), nullptr, FColor::White, 0.0f, true, 1.0f);
@@ -106,11 +122,16 @@ void ANetworkProjectCharacter::Tick(float DeltaSeconds)
 	if (curHP <= 0)
 	{
 		bIsDead = true;
-		GetCharacterMovement()->DisableMovement();
-		GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-		bUseControllerRotationYaw = false;
-		FollowCamera->PostProcessSettings.ColorSaturation = FVector4(0, 0, 0, 1);
+
+		// 조작을 하는 클라이언트에서만 실행한다.
+		if (GetController() != nullptr && GetController()->IsLocalController())
+		{
+			GetCharacterMovement()->DisableMovement();
+			GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+			GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+			bUseControllerRotationYaw = false;
+			FollowCamera->PostProcessSettings.ColorSaturation = FVector4(0, 0, 0, 1);
+		}
 	}
 
 }
@@ -148,7 +169,7 @@ void ANetworkProjectCharacter::SetupPlayerInputComponent(class UInputComponent* 
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ANetworkProjectCharacter::Move);
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ANetworkProjectCharacter::Look);
 		EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Started, this, &ANetworkProjectCharacter::Fire);
-
+		EnhancedInputComponent->BindAction(ReleaseAction, ETriggerEvent::Started, this, &ANetworkProjectCharacter::ReleaseWeapon);
 	}
 
 }
@@ -189,12 +210,15 @@ void ANetworkProjectCharacter::Look(const FInputActionValue& Value)
 	}
 }
 
+// 총 발사
 void ANetworkProjectCharacter::Fire()
 {
 	//UE_LOG(LogTemp, Warning, TEXT("Query Fire!"));
 	//GEngine->AddOnScreenDebugMessage(-1, 3, FColor::Green, FString("Query Fire!"), true, FVector2D(1.2f));
-
-	ServerFire();
+	if (owningWeapon != nullptr && !bFireDelay)
+	{
+		ServerFire();
+	}
 }
 
 
@@ -204,15 +228,28 @@ void ANetworkProjectCharacter::ServerFire_Implementation()
 	//UE_LOG(LogTemp, Warning, TEXT("Server Fire!"));
 	//GEngine->AddOnScreenDebugMessage(-1, 3, FColor::Green, FString("Server Fire!"), true, FVector2D(1.2f));
 
-	FActorSpawnParameters param;
-	param.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	// 만일 총알이 있으면 총알을 생성한다.
+	if (ammo > 0)
+	{
+		FActorSpawnParameters param;
+		param.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
 
-	ABulletActor* bullet = GetWorld()->SpawnActor<ABulletActor>(bulletFactory, GetActorLocation() + GetActorForwardVector() * 100, GetActorRotation(), param);
-	bullet->SetOwner(this);
-	//bullet->SetOwner(nullptr);
+		ABulletActor* bullet = GetWorld()->SpawnActor<ABulletActor>(bulletFactory, owningWeapon->meshComp->GetSocketLocation(FName("AmmoSocket")), owningWeapon->meshComp->GetSocketRotation(FName("AmmoSocket")), param);
+		bullet->SetOwner(this);
+		bullet->attackPower = owningWeapon->damagePower;
+		ammo--;
+		owningWeapon->ammo--;
+		bFireDelay = true;
+		FTimerHandle fireDelayHandle;
+		GetWorldTimerManager().SetTimer(fireDelayHandle, FTimerDelegate::CreateLambda([&](){bFireDelay = false;}), owningWeapon->reloadTime, false);
 
-	MulticastFire();
-	//ClientFire();
+		MulticastFire(true);
+		//ClientFire();
+	}
+	else
+	{
+		MulticastFire(false);
+	}
 
 }
 
@@ -222,14 +259,34 @@ bool ANetworkProjectCharacter::ServerFire_Validate()
 }
 
 // 서버로부터 전달되는 함수
-void ANetworkProjectCharacter::MulticastFire_Implementation()
+void ANetworkProjectCharacter::MulticastFire_Implementation(bool bHasAmmo)
 {
 	//UE_LOG(LogTemp, Warning, TEXT("Multicast Fire!"));
 	//GEngine->AddOnScreenDebugMessage(-1, 3, FColor::Green, FString("Multicast Fire!"), true, FVector2D(1.2f));
 
-	if (fireMontage != nullptr)
+	if(bHasAmmo)
 	{
-		PlayAnimMontage(fireMontage);
+		if (fireMontage != nullptr)
+		{
+			PlayAnimMontage(fireMontage);
+		}
+	}
+	else
+	{
+		if (noAmmoMontage != nullptr)
+		{
+			PlayAnimMontage(noAmmoMontage);
+		}
+	}
+}
+
+
+// 총 내려놓기
+void ANetworkProjectCharacter::ReleaseWeapon()
+{
+	if (GetController() != nullptr && GetController()->IsLocalController() && owningWeapon != nullptr)
+	{
+		owningWeapon->ServerReleaseWeapon(this);
 	}
 }
 
@@ -262,7 +319,7 @@ void ANetworkProjectCharacter::MulticastDamageProcess_Implementation()
 {
 	if (curHP > 0)
 	{
-		if(hitMontage != nullptr)
+		if (hitMontage != nullptr)
 		{
 			PlayAnimMontage(hitMontage);
 		}
@@ -271,12 +328,17 @@ void ANetworkProjectCharacter::MulticastDamageProcess_Implementation()
 	else
 	{
 		// 죽음 변수 변경
-		
+
 		if (playerAnim != nullptr)
 		{
 			playerAnim->bIsDead = true;
 		}
 	}
+}
+
+void ANetworkProjectCharacter::ServerSetName_Implementation(const FString& name)
+{
+	myName = name;
 }
 
 void ANetworkProjectCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -289,8 +351,7 @@ void ANetworkProjectCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProper
 	DOREPLIFETIME(ANetworkProjectCharacter, curHP);
 	DOREPLIFETIME(ANetworkProjectCharacter, ammo);
 	DOREPLIFETIME(ANetworkProjectCharacter, myName);
-	DOREPLIFETIME(ANetworkProjectCharacter, bIsDead);
-
+	DOREPLIFETIME(ANetworkProjectCharacter, bFireDelay);
 }
 
 
