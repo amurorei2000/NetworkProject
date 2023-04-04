@@ -20,4 +20,7 @@ protected:
 public:
 	UPROPERTY(EditAnywhere)
 	TSubclassOf<class UMainWidget> mainWidget;
+
+	void Respawn(class ANetworkProjectCharacter* player);
+
 };

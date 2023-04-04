@@ -128,8 +128,10 @@ public:
 
 private:
 	FString PrintInfo();
-
 	int32 number;
+	bool bIsDead = false;
+	class UPlayerAnimInstance* playerAnim;
+	class UServerGameInstance* gameInstance;
 
 	UPROPERTY(Replicated)
 	int32 repNumber;
@@ -140,8 +142,7 @@ private:
 	UPROPERTY(Replicated)
 	bool bFireDelay = false;
 
-	bool bIsDead = false;
-	class UPlayerAnimInstance* playerAnim;
-	class UServerGameInstance* gameInstance;
+	void DieProcess();
+	void ChangeSpectatorMode();
 };
 

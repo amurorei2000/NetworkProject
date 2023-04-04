@@ -18,6 +18,12 @@
 #include "WeaponActor.h"
 #include "ServerGameInstance.h"
 #include "Components/TextBlock.h"
+#include "GameFramework/HUD.h"
+#include "BattlePlayerState.h"
+#include "GameFramework/GameStateBase.h"
+#include "BattlePlayerController.h"
+#include "BattleSpectatorPawn.h"
+#include "BattleGameMode.h"
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -81,7 +87,7 @@ void ANetworkProjectCharacter::BeginPlay()
 	if (HasAuthority())
 	{
 		SetHealth(maxHP);
-		
+
 	}
 
 	infoWidget = Cast<UPlayerInfoWidget>(playerInfoUI->GetWidget());
@@ -91,12 +97,14 @@ void ANetworkProjectCharacter::BeginPlay()
 	if (GetController() != nullptr && GetController()->IsLocalController())
 	{
 		ServerSetName(gameInstance->sessionID.ToString());
+
+
 	}
 
 	/*FTimerHandle nameHandle;
 	GetWorldTimerManager().SetTimer(nameHandle, FTimerDelegate::CreateLambda([&](){ }), 0.1f, false);*/
 
-	
+
 }
 
 void ANetworkProjectCharacter::Tick(float DeltaSeconds)
@@ -121,19 +129,8 @@ void ANetworkProjectCharacter::Tick(float DeltaSeconds)
 
 	if (curHP <= 0)
 	{
-		bIsDead = true;
-
-		// 조작을 하는 클라이언트에서만 실행한다.
-		if (GetController() != nullptr && GetController()->IsLocalController())
-		{
-			GetCharacterMovement()->DisableMovement();
-			GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-			GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-			bUseControllerRotationYaw = false;
-			FollowCamera->PostProcessSettings.ColorSaturation = FVector4(0, 0, 0, 1);
-		}
+		DieProcess();
 	}
-
 }
 
 FString ANetworkProjectCharacter::PrintInfo()
@@ -154,7 +151,86 @@ FString ANetworkProjectCharacter::PrintInfo()
 	//infoText = FString::Printf(TEXT("Number: %d\nReplicated Number: %d"), number, repNumber);
 #pragma endregion
 
+#pragma region PlayerInfo
+	/*APlayerController* pc = Cast<APlayerController>(GetController());
+
+	FString pcString = pc != nullptr ? FString(pc->GetName()) : FString("Has No Controller");
+	FString gmString = GetWorld()->GetAuthGameMode() != nullptr ? FString("Has GameModeBase") : FString("Has No GameModeBase");
+	FString gsString = GetWorld()->GetGameState() != nullptr ? FString("Has GameState") : FString("Has No GameState");
+	FString psString = GetPlayerState() != nullptr ? FString("Has PlayerState") : FString("Has No PlayerState");
+	FString hudString;
+	if(pc != nullptr)
+	{
+		hudString = pc->GetHUD() != nullptr ? pc->GetHUD()->GetName() : FString("No HUD");
+	}
+	infoText = FString::Printf(TEXT("%s\n%s\n%s\n%s\n%s"), *pcString, *gmString, *gsString, *psString, *hudString);*/
+#pragma endregion
+
+	FString psName;
+	if (GetPlayerState() != nullptr)
+	{
+		psName = GetPlayerState()->GetPlayerName();
+		
+	}
+	
+	FString gsNames;
+	if(GetWorld()->GetGameState() != nullptr)
+	{
+		for (TObjectPtr<APlayerState> ps : GetWorld()->GetGameState()->PlayerArray)
+		{
+			gsNames.Append(FString::Printf(TEXT("%s\n"), *ps->GetPlayerName()));
+		}
+	}
+	infoText = FString::Printf(TEXT("Player State: %s\nGame State:\n%s"), *psName, *gsNames);
+
 	return infoText;
+}
+
+// 캐릭터 사망 시 처리 함수
+void ANetworkProjectCharacter::DieProcess()
+{
+	bIsDead = true;
+
+	// 조작을 하는 클라이언트에서만 실행한다.
+	if (GetController() != nullptr && GetController()->IsLocalController())
+	{
+		GetCharacterMovement()->DisableMovement();
+		GetMesh()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		bUseControllerRotationYaw = false;
+		FollowCamera->PostProcessSettings.ColorSaturation = FVector4(0, 0, 0, 1);
+		ReleaseWeapon();
+	}
+
+	if (HasAuthority())
+	{
+		FTimerHandle respawnHandle;
+		GetWorldTimerManager().SetTimer(respawnHandle, FTimerDelegate::CreateLambda([&]() {
+			//Cast<ABattlePlayerController>(GetController())->Respawn(this);
+			ChangeSpectatorMode();
+			}), 3.0f, false);
+	}
+}
+
+// 관전자 모드로 변경하는 함수
+void ANetworkProjectCharacter::ChangeSpectatorMode()
+{
+	ABattleGameMode* gm = Cast<ABattleGameMode>(GetWorld()->GetAuthGameMode());
+
+	if (gm != nullptr)
+	{
+		// 게임 모드에 설정한 관전자 폰 클래스를 불러온다.
+		TSubclassOf<ASpectatorPawn> spectatorPawn = gm->SpectatorClass;
+
+		FActorSpawnParameters param;
+		param.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+		ABattleSpectatorPawn* spectator = GetWorld()->SpawnActor<ABattleSpectatorPawn>(spectatorPawn, GetActorLocation(), GetActorRotation(), param);
+		if (spectator != nullptr)
+		{
+			spectator->originalPlayer = this;
+			GetController()->Possess(spectator);
+		}
+	}
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -241,7 +317,7 @@ void ANetworkProjectCharacter::ServerFire_Implementation()
 		owningWeapon->ammo--;
 		bFireDelay = true;
 		FTimerHandle fireDelayHandle;
-		GetWorldTimerManager().SetTimer(fireDelayHandle, FTimerDelegate::CreateLambda([&](){bFireDelay = false;}), owningWeapon->reloadTime, false);
+		GetWorldTimerManager().SetTimer(fireDelayHandle, FTimerDelegate::CreateLambda([&]() {bFireDelay = false; }), owningWeapon->reloadTime, false);
 
 		MulticastFire(true);
 		//ClientFire();
@@ -264,7 +340,7 @@ void ANetworkProjectCharacter::MulticastFire_Implementation(bool bHasAmmo)
 	//UE_LOG(LogTemp, Warning, TEXT("Multicast Fire!"));
 	//GEngine->AddOnScreenDebugMessage(-1, 3, FColor::Green, FString("Multicast Fire!"), true, FVector2D(1.2f));
 
-	if(bHasAmmo)
+	if (bHasAmmo)
 	{
 		if (fireMontage != nullptr)
 		{
@@ -339,6 +415,13 @@ void ANetworkProjectCharacter::MulticastDamageProcess_Implementation()
 void ANetworkProjectCharacter::ServerSetName_Implementation(const FString& name)
 {
 	myName = name;
+
+	ABattlePlayerState* ps = Cast<ABattlePlayerState>(GetPlayerState());
+
+	if (ps != nullptr)
+	{
+		ps->SetPlayerName(name);
+	}
 }
 
 void ANetworkProjectCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

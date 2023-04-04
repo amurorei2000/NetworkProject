@@ -26,7 +26,7 @@ AWeaponActor::AWeaponActor()
 void AWeaponActor::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
 	boxComp->OnComponentBeginOverlap.AddDynamic(this, &AWeaponActor::OnOverlap);
 
 }
@@ -60,10 +60,13 @@ void AWeaponActor::ServerGrabWeapon_Implementation(ANetworkProjectCharacter* pla
 
 void AWeaponActor::MulticastGrabWeapon_Implementation(ANetworkProjectCharacter* player)
 {
-	player->owningWeapon = this;
-	boxComp->SetSimulatePhysics(false);
-	AttachToComponent(player->GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("WeaponSocket"));
-	boxComp->SetCollisionResponseToChannel(ECC_GameTraceChannel1, ECR_Ignore);
+	if (player != nullptr)
+	{
+		player->owningWeapon = this;
+		boxComp->SetSimulatePhysics(false);
+		AttachToComponent(player->GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("WeaponSocket"));
+		boxComp->SetCollisionResponseToChannel(ECC_GameTraceChannel1, ECR_Ignore);
+	}
 }
 
 
@@ -81,11 +84,11 @@ void AWeaponActor::MulticastReleaseWeapon_Implementation(class ANetworkProjectCh
 
 	FTimerHandle releaseHandle;
 	GetWorldTimerManager().SetTimer(releaseHandle, FTimerDelegate::CreateLambda(
-									[&]()
-									{
-									boxComp->SetCollisionResponseToChannel(ECC_GameTraceChannel1, ECR_Overlap); 
-									}), 3.0f, false);
-	
+		[&]()
+		{
+			boxComp->SetCollisionResponseToChannel(ECC_GameTraceChannel1, ECR_Overlap);
+		}), 3.0f, false);
+
 	player->owningWeapon = nullptr;
 }
 
