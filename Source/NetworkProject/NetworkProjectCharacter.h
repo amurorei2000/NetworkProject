@@ -46,6 +46,9 @@ class ANetworkProjectCharacter : public ACharacter
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
 	class UInputAction* ReleaseAction;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = Input, meta = (AllowPrivateAccess = "true"))
+	class UInputAction* ZigZagAction;
+
 
 public:
 	ANetworkProjectCharacter();
@@ -120,7 +123,15 @@ public:
 
 	UFUNCTION(Server, Unreliable)
 	void ServerSetName(const FString& name);
+	
+	void EndSession();
 
+	UFUNCTION(Server, Unreliable)
+	void ServerDestroyAllSessions();
+
+	UFUNCTION(NetMulticast, Unreliable)
+	void MulticastDestroyAllSessions();
+	
 	FORCEINLINE int32 GetHealth() { return curHP; };
 	FORCEINLINE int32 GetAmmo() { return ammo; };
 	FORCEINLINE bool IsDead() { return bIsDead; };
@@ -132,6 +143,7 @@ private:
 	bool bIsDead = false;
 	class UPlayerAnimInstance* playerAnim;
 	class UServerGameInstance* gameInstance;
+	FVector zigzagDir = FVector::RightVector;
 
 	UPROPERTY(Replicated)
 	int32 repNumber;
@@ -142,7 +154,14 @@ private:
 	UPROPERTY(Replicated)
 	bool bFireDelay = false;
 
+	UPROPERTY(Replicated)
+	bool bZigZag = false;
+
 	void DieProcess();
 	void ChangeSpectatorMode();
+	void ZigZag();
+
+	UFUNCTION()
+	void DestroyMySession();
 };
 

@@ -6,6 +6,8 @@
 #include "../NetworkProjectCharacter.h"
 #include "GameFramework/GameStateBase.h"
 #include "GameFramework/PlayerState.h"
+#include "BattleGameStateBase.h"
+#include "Components/Button.h"
 
 
 void UMainWidget::NativeConstruct()
@@ -13,7 +15,7 @@ void UMainWidget::NativeConstruct()
 	Super::NativeConstruct();
 
 	player = Cast<ANetworkProjectCharacter>(GetOwningPlayerPawn());
-
+	btn_Exit->OnClicked.AddDynamic(this, &UMainWidget::ExitSession);
 
 }
 
@@ -28,12 +30,23 @@ void UMainWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 
 	if (GetWorld()->GetGameState() != nullptr)
 	{
-		for (auto& ps : GetWorld()->GetGameState()->PlayerArray)
+		ABattleGameStateBase* gs = Cast<ABattleGameStateBase>(GetWorld()->GetGameState());
+
+		for (const auto& ps : gs->GetPlayerListByScore())
 		{
 			FString playerName = ps->GetPlayerName();
-			playerList.Append(FString::Printf(TEXT("%s\n"), *playerName));
+			int32 playerScore = ps->GetScore();
+			playerList.Append(FString::Printf(TEXT("%s : %d\n"), *playerName, playerScore));
 		}
 
 		text_playerList->SetText(FText::FromString(playerList));
+	}
+}
+
+void UMainWidget::ExitSession()
+{
+	if (player != nullptr)
+	{
+		player->EndSession();
 	}
 }

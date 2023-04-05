@@ -33,7 +33,15 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = AnimSettings)
 	bool bIsDead = false;
 
+	UFUNCTION()
+	void AnimNotify_WalkSound();
+
 private:
 	class ANetworkProjectCharacter* player;
+	
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = AnimSettings, meta=(AllowPrivateAccess))
+	class USoundBase* source;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = AnimSettings, meta=(AllowPrivateAccess))
+	class USoundAttenuation* attenu;
 
 };

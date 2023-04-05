@@ -7,6 +7,8 @@
 #include "Kismet/GameplayStatics.h"
 #include "DrawDebugHelpers.h"
 #include "../NetworkProjectCharacter.h"
+#include "GameFramework/PlayerState.h"
+
 
 ABulletActor::ABulletActor()
 {
@@ -56,6 +58,15 @@ void ABulletActor::OnOverlap(UPrimitiveComponent* OverlappedComponent, AActor* O
 		{
 			if (player != nullptr)
 			{
+				if (player->GetHealth() <= attackPower)
+				{
+					ANetworkProjectCharacter* myOwner = Cast<ANetworkProjectCharacter>(GetOwner());
+					if (myOwner != nullptr)
+					{
+						myOwner->GetPlayerState()->SetScore(myOwner->GetPlayerState()->GetScore() + 10);
+					}
+				}
+
 				player->ServerDamageProcess(attackPower * -1);
 				Destroy();
 			}

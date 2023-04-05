@@ -5,6 +5,7 @@
 #include "../NetworkProjectCharacter.h"
 #include "KismetAnimationLibrary.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Kismet/GameplayStatics.h"
 
 
 void UPlayerAnimInstance::NativeBeginPlay()
@@ -56,4 +57,9 @@ void UPlayerAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 	
 	// 죽었는지 확인
 	bIsDead = player->IsDead();
+}
+
+void UPlayerAnimInstance::AnimNotify_WalkSound()
+{
+	UGameplayStatics::PlaySoundAtLocation(GetWorld(), source, player->GetActorLocation(), 1, 1, 0, attenu);
 }

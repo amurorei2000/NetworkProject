@@ -24,6 +24,7 @@
 #include "BattlePlayerController.h"
 #include "BattleSpectatorPawn.h"
 #include "BattleGameMode.h"
+#include "EngineUtils.h"
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -101,8 +102,8 @@ void ANetworkProjectCharacter::BeginPlay()
 
 	}
 
-	/*FTimerHandle nameHandle;
-	GetWorldTimerManager().SetTimer(nameHandle, FTimerDelegate::CreateLambda([&](){ }), 0.1f, false);*/
+	FTimerHandle dirHandle;
+	GetWorldTimerManager().SetTimer(dirHandle, FTimerDelegate::CreateLambda([&]() { zigzagDir *= -1.0f; }), 1.0f, true);
 
 
 }
@@ -130,6 +131,11 @@ void ANetworkProjectCharacter::Tick(float DeltaSeconds)
 	if (curHP <= 0)
 	{
 		DieProcess();
+	}
+
+	if (bZigZag)
+	{
+		AddMovementInput(zigzagDir);
 	}
 }
 
@@ -170,11 +176,11 @@ FString ANetworkProjectCharacter::PrintInfo()
 	if (GetPlayerState() != nullptr)
 	{
 		psName = GetPlayerState()->GetPlayerName();
-		
+
 	}
-	
+
 	FString gsNames;
-	if(GetWorld()->GetGameState() != nullptr)
+	if (GetWorld()->GetGameState() != nullptr)
 	{
 		for (TObjectPtr<APlayerState> ps : GetWorld()->GetGameState()->PlayerArray)
 		{
@@ -200,16 +206,17 @@ void ANetworkProjectCharacter::DieProcess()
 		bUseControllerRotationYaw = false;
 		FollowCamera->PostProcessSettings.ColorSaturation = FVector4(0, 0, 0, 1);
 		ReleaseWeapon();
+		GetWorld()->GetFirstPlayerController()->SetShowMouseCursor(true);
 	}
 
-	if (HasAuthority())
-	{
-		FTimerHandle respawnHandle;
-		GetWorldTimerManager().SetTimer(respawnHandle, FTimerDelegate::CreateLambda([&]() {
-			//Cast<ABattlePlayerController>(GetController())->Respawn(this);
-			ChangeSpectatorMode();
-			}), 3.0f, false);
-	}
+	//if (HasAuthority())
+	//{
+	//	FTimerHandle respawnHandle;
+	//	GetWorldTimerManager().SetTimer(respawnHandle, FTimerDelegate::CreateLambda([&]() {
+	//		//Cast<ABattlePlayerController>(GetController())->Respawn(this);
+	//		ChangeSpectatorMode();
+	//		}), 3.0f, false);
+	//}
 }
 
 // 관전자 모드로 변경하는 함수
@@ -233,6 +240,12 @@ void ANetworkProjectCharacter::ChangeSpectatorMode()
 	}
 }
 
+void ANetworkProjectCharacter::ZigZag()
+{
+	bZigZag = !bZigZag;
+}
+
+
 //////////////////////////////////////////////////////////////////////////
 // Input
 
@@ -246,6 +259,7 @@ void ANetworkProjectCharacter::SetupPlayerInputComponent(class UInputComponent* 
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &ANetworkProjectCharacter::Look);
 		EnhancedInputComponent->BindAction(FireAction, ETriggerEvent::Started, this, &ANetworkProjectCharacter::Fire);
 		EnhancedInputComponent->BindAction(ReleaseAction, ETriggerEvent::Started, this, &ANetworkProjectCharacter::ReleaseWeapon);
+		EnhancedInputComponent->BindAction(ZigZagAction, ETriggerEvent::Started, this, &ANetworkProjectCharacter::ZigZag);
 	}
 
 }
@@ -424,6 +438,55 @@ void ANetworkProjectCharacter::ServerSetName_Implementation(const FString& name)
 	}
 }
 
+void ANetworkProjectCharacter::EndSession()
+{
+	// 세션 종료
+	if (HasAuthority())
+	{
+		for (TActorIterator<ANetworkProjectCharacter> pl(GetWorld()); pl; ++pl)
+		{
+			ANetworkProjectCharacter* p = *pl;
+			if (p != this)
+			{
+				p->ServerDestroyAllSessions();
+			}
+		}
+		FTimerHandle testHandle;
+		GetWorldTimerManager().SetTimer(testHandle, this, &ANetworkProjectCharacter::DestroyMySession, 1.0f, false);
+
+	}
+	else
+	{
+		DestroyMySession();
+	}
+}
+
+
+void ANetworkProjectCharacter::DestroyMySession()
+{
+	bool endResult = gameInstance->sessionInterface->DestroySession(gameInstance->sessionID);
+	UE_LOG(LogTemp, Warning, TEXT("End Session Result: %s"), endResult ? TEXT("Success") : TEXT("Failed"));
+
+	// 레벨을 다시 처음 위치로 이동한다.
+	ABattlePlayerController* pc = Cast<ABattlePlayerController>(GetController());
+	pc->ClientTravel(FString("/Game/Maps/LoginMap"), ETravelType::TRAVEL_Absolute);
+}
+
+
+void ANetworkProjectCharacter::ServerDestroyAllSessions_Implementation()
+{
+	MulticastDestroyAllSessions();
+	
+}
+
+void ANetworkProjectCharacter::MulticastDestroyAllSessions_Implementation()
+{
+	if (GetController() != nullptr && GetController()->IsLocalController())
+	{
+		DestroyMySession();
+	}
+}
+
 void ANetworkProjectCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
@@ -435,6 +498,7 @@ void ANetworkProjectCharacter::GetLifetimeReplicatedProps(TArray<FLifetimeProper
 	DOREPLIFETIME(ANetworkProjectCharacter, ammo);
 	DOREPLIFETIME(ANetworkProjectCharacter, myName);
 	DOREPLIFETIME(ANetworkProjectCharacter, bFireDelay);
+	DOREPLIFETIME(ANetworkProjectCharacter, bZigZag);
 }
 
 
